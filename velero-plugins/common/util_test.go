@@ -6,6 +6,8 @@ import (
 	"testing"
 	"errors"
 	"reflect"
+        "github.com/sirupsen/logrus"
+        corev1API "k8s.io/api/core/v1"
 )
 
 
@@ -92,6 +94,45 @@ func TestParseLocalImageReference(t *testing.T) {
 			if tc.expErr != nil && err == nil {
 				t.Fatalf("expected error, got no error")
 			}
+                })
+        }
+}
+
+
+// SwapContainerImageRefs updates internal image references from
+// backup registry to restore registry pathnames
+func TestSwapContainerImageRefs(t *testing.T) {
+        tests := map[string]struct {
+		containers		 []corev1API.Container
+		oldRegistry, newRegistry string
+		log			 logrus.FieldLogger
+		namespaceMapping	 map[string]string
+                exp			 []corev1API.Container
+        }{
+		"1": {
+			containers: []corev1API.Container{
+				corev1API.Container{Image: "foo/cat"},
+				corev1API.Container{Image: "foo/cat/y"},
+				corev1API.Container{Image: "foo/dog/x"},
+				corev1API.Container{Image: "boo/cat"}},
+			oldRegistry: "foo",
+			newRegistry: "bar",
+			log: logrus.New(),
+			namespaceMapping: map[string]string{"dog": "puppy", "cat": "kitten"},
+			exp: []corev1API.Container{
+				corev1API.Container{Image: "bar/cat"},
+				corev1API.Container{Image: "bar/kitten/y"},
+				corev1API.Container{Image: "bar/puppy/x"},
+				corev1API.Container{Image: "boo/cat"}},
+		},
+        }
+
+        for name, tc := range tests {
+                t.Run(name, func(t *testing.T) {
+                        SwapContainerImageRefs(tc.containers, tc.oldRegistry, tc.newRegistry, tc.log, tc.namespaceMapping)
+                        if !reflect.DeepEqual(tc.containers, tc.exp) {
+                                t.Fatalf("expected: %v, got: %v", tc.exp, tc.containers)
+                        }
                 })
         }
 }
