@@ -8,6 +8,8 @@ import (
 	"reflect"
         "github.com/sirupsen/logrus"
         corev1API "k8s.io/api/core/v1"
+//        "k8s.io/apimachinery/pkg/runtime"
+//	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 
@@ -138,7 +140,72 @@ func TestSwapContainerImageRefs(t *testing.T) {
 }
 
 
+// UpdatePullSecret updates registry pull (or push) secret
+// with a secret found in the dest cluster
+func TestUpdatePullSecret(t *testing.T) {
+	tests := map[string]struct {
+	        secretRef  *corev1API.LocalObjectReference
+	        secretList *corev1API.SecretList
+	        log	   logrus.FieldLogger
+                exp        *corev1API.LocalObjectReference
+                expErr     error
+        }{
+                "1": {
+			secretRef: &corev1API.LocalObjectReference{Name: "foo"},
+			secretList: &corev1API.SecretList{
+				Items: []Secret{
+					&corev1API.LocalObjectReference{Name: "foo"},
+				},
+			},
+			log: logrus.New(),
+			exp: &corev1API.LocalObjectReference{Name: "foo"},
+                        expErr: nil,
+                },
+        }
 
+        for name, tc := range tests {
+                t.Run(name, func(t *testing.T) {
+                        got, err := TestUpdatePullSecret(tc.secretRef, tc.secretList, tc.log)
+                        if tc.expErr == nil && (got != tc.exp) {
+                                t.Fatalf("expected: %v, got: %v", tc.exp, got)
+                        }
+                        if tc.expErr != nil && err == nil {
+                                t.Fatalf("expected error, got no error")
+                        }
+                })
+        }
+}
 
+/*
+// GetSrcAndDestRegistryInfo returns the Registry hostname for both src and dest clusters
+func TestGetSrcAndDestRegistryInfo(t *testing.T) {
+        tests := map[string]struct {
+		item   runtime.Unstructured
+		exp1   string
+		exp2   string
+		expErr error
+	}{
+		"1": {
+			//item: runtime.Unstructured{Object{Annotations: {BackupRegistryHostname: "AA", RestoreRegistryHostname: "BB"}}},
+			item: runtime.Unstructured{},
+			exp1: "AA",
+			exp2: "BB",
+			expErr: nil,
+		},
+	}
+
+        for name, tc := range tests {
+                t.Run(name, func(t *testing.T) {
+			got1, got2, err := GetSrcAndDestRegistryInfo(tc.item)
+			if tc.expErr == nil && (got1 != tc.exp1 || got2 != tc.exp2) {
+                                t.Fatalf("expected: [%v, %v], got: [%v, %v]", tc.exp1, tc.exp2, got1, got2)
+                        }
+			if tc.expErr != nil && err == nil {
+				t.Fatalf("expected error, got no error")
+			}
+                })
+        }
+}
+*/
 
 
