@@ -8,7 +8,8 @@ import (
 	"reflect"
         "github.com/sirupsen/logrus"
         corev1API "k8s.io/api/core/v1"
-//        "k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//        "k8s.io/apimachinery/pkg/runtime"
 //	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -153,20 +154,44 @@ func TestUpdatePullSecret(t *testing.T) {
                 "1": {
 			secretRef: &corev1API.LocalObjectReference{Name: "foo"},
 			secretList: &corev1API.SecretList{
-				Items: []Secret{
-					&corev1API.LocalObjectReference{Name: "foo"},
+				Items: []corev1API.Secret{
+					corev1API.Secret{},
 				},
 			},
 			log: logrus.New(),
 			exp: &corev1API.LocalObjectReference{Name: "foo"},
                         expErr: nil,
                 },
+                "2": {
+			secretRef: &corev1API.LocalObjectReference{Name: "default-dockercfg-foo"},
+			secretList: &corev1API.SecretList{
+				Items: []corev1API.Secret{
+					corev1API.Secret{ObjectMeta: metav1.ObjectMeta{Name: "default-dockercfg-bar"}},
+				},
+			},
+			log: logrus.New(),
+			exp: &corev1API.LocalObjectReference{Name: "default-dockercfg-bar"},
+                        expErr: nil,
+                },
+                "3": {
+			secretRef: &corev1API.LocalObjectReference{Name: "deployer-dockercfg-foo"},
+			secretList: &corev1API.SecretList{
+				Items: []corev1API.Secret{
+					corev1API.Secret{ObjectMeta: metav1.ObjectMeta{Name: "default-dockercfg-bar"}},
+					corev1API.Secret{ObjectMeta: metav1.ObjectMeta{Name: "deployer-dockercfg-cat"}},
+					corev1API.Secret{ObjectMeta: metav1.ObjectMeta{Name: "deployer-dockercfg-dog"}},
+				},
+			},
+			log: logrus.New(),
+			exp: &corev1API.LocalObjectReference{Name: "deployer-dockercfg-cat"},
+                        expErr: nil,
+                },
         }
 
         for name, tc := range tests {
                 t.Run(name, func(t *testing.T) {
-                        got, err := TestUpdatePullSecret(tc.secretRef, tc.secretList, tc.log)
-                        if tc.expErr == nil && (got != tc.exp) {
+                        got, err := UpdatePullSecret(tc.secretRef, tc.secretList, tc.log)
+                        if tc.expErr == nil && !reflect.DeepEqual(got, tc.exp) {
                                 t.Fatalf("expected: %v, got: %v", tc.exp, got)
                         }
                         if tc.expErr != nil && err == nil {
