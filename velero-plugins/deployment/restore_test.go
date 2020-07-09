@@ -310,12 +310,12 @@ func TestRestorePluginExecute(t *testing.T) {
 
 			output, _ := restorePlugin.Execute(input)
 
-			deployment := appsv1API.Deployment{}
+			deploymentOut := appsv1API.Deployment{}
 			itemMarshal, _ := json.Marshal(output.UpdatedItem)
-			json.Unmarshal(itemMarshal, &deployment)
+			json.Unmarshal(itemMarshal, &deploymentOut)
 
-			if !reflect.DeepEqual(deployment, tc.exp) {
-                                t.Fatalf("expected: %v, got: %v", tc.exp, deployment)
+			if !reflect.DeepEqual(deploymentOut, tc.exp) {
+                                t.Fatalf("expected: %v, got: %v", tc.exp, deploymentOut)
                         }
 		})
         }
